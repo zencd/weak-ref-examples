@@ -5,13 +5,20 @@ import java.util.concurrent.TimeUnit;
 
 public class WeakBeansExample {
     static class BeanManager {
-        WeakHashMap<Object, String> beans = new WeakHashMap<>();
+        WeakHashMap<Bean, String> beans = new WeakHashMap<>();
+        //WeakValueMap<String, Bean> bea
 
-        Object getBean(String name) {
-            List<String> bean = Arrays.asList("bean:" + name);
+        Bean getBean(String name) {
+            var bean = new Bean(name);
             beans.put(bean, null);
             return bean;
         }
+    }
+
+    static class Bean {
+        final String name;
+        Bean(String name) { this.name = name; }
+        public String toString() { return "bean:" + name; }
     }
 
     static void beanUser(BeanManager beanManager, String beanName, long pause) {
@@ -27,8 +34,8 @@ public class WeakBeansExample {
 
     public static void main(String[] args) throws InterruptedException {
         BeanManager beanManager = new BeanManager();
-        new Thread(() -> beanUser(beanManager, "A", 2000)).start();
-        new Thread(() -> beanUser(beanManager, "B", 4000)).start();
+        new Thread(() -> beanUser(beanManager, "A", 1000)).start();
+        new Thread(() -> beanUser(beanManager, "B", 2000)).start();
         TimeUnit.MILLISECONDS.sleep(500);
         while (beanManager.beans.size() > 0) {
             System.out.println("beans alive: " + beanManager.beans.size());
