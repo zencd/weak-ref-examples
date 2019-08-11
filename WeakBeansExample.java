@@ -1,17 +1,18 @@
-import java.util.Arrays;
-import java.util.List;
-import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class WeakBeansExample {
     static class BeanManager {
-        WeakHashMap<Bean, String> beans = new WeakHashMap<>();
-        //WeakValueMap<String, Bean> bea
+        final WeakValueMap<String, Bean> beans = new WeakValueMap<>();
 
         Bean getBean(String name) {
-            var bean = new Bean(name);
-            beans.put(bean, null);
-            return bean;
+            synchronized (beans) {
+                Bean bean = beans.get(name);
+                if (bean == null) {
+                    bean = new Bean(name);
+                    beans.put(name, bean);
+                }
+                return bean;
+            }
         }
     }
 
@@ -24,7 +25,6 @@ public class WeakBeansExample {
     static void beanUser(BeanManager beanManager, String beanName, long pause) {
         try {
             var bean = beanManager.getBean(beanName);
-            System.out.println("someone started using bean " + bean.toString());
             Thread.sleep(pause);
             System.out.println("finished using bean " + bean.toString());
         } catch (InterruptedException e) {

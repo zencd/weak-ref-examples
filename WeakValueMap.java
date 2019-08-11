@@ -11,7 +11,7 @@ public class WeakValueMap<K, V> implements Map<K, V> {
     private final Map<K, WeakReference<V>> map = new HashMap<>();
 
     @Override
-    synchronized public int size() {
+    public int size() {
         map.entrySet().removeIf(it -> it.getValue().get() == null);
         return map.size();
     }
@@ -34,7 +34,7 @@ public class WeakValueMap<K, V> implements Map<K, V> {
     @Override
     public V get(Object key) {
         WeakReference<V> weak = map.get(key);
-        return weak.get();
+        return (weak != null) ? weak.get() : null;
     }
 
     @Override
