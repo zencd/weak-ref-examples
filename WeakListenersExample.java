@@ -18,9 +18,9 @@ public class WeakListenersExample {
         }
     }
 
-    static void client(Manager eventManager) {
+    private static void clientThread(Manager eventManager) {
         Listener listener = new Listener() {
-            // XXX do not "optimize" it to lambda!
+            // XXX do not "optimize" it to lambda
             public void process() {
                 System.out.println("a listener reacts on event");
             }
@@ -32,7 +32,7 @@ public class WeakListenersExample {
         var manager = new Manager();
 
         for (int i = 0; i < 3; i++) {
-            client(manager);
+            clientThread(manager);
         }
 
         System.out.println("notifying listeners...");
