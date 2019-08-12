@@ -9,14 +9,16 @@ public class WeakListenersExample {
         void process();
     }
 
-    // WeakHashSet не завезли, так что newSetFromMap()
-    final Set<Listener> listeners = Collections.newSetFromMap(new WeakHashMap<>());
+    static class Manager {
+        // WeakHashSet не завезли, так что newSetFromMap()
+        final Set<Listener> listeners = Collections.newSetFromMap(new WeakHashMap<>());
 
-    private void addEventListener(Listener listener) {
-        listeners.add(listener);
+        void addEventListener(Listener listener) {
+            listeners.add(listener);
+        }
     }
 
-    static void client(WeakListenersExample eventManager) {
+    static void client(Manager eventManager) {
         Listener listener = new Listener() {
             // XXX do not "optimize" it to lambda!
             public void process() {
@@ -27,17 +29,17 @@ public class WeakListenersExample {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        var eventManager = new WeakListenersExample();
+        var manager = new Manager();
 
         for (int i = 0; i < 3; i++) {
-            client(eventManager);
+            client(manager);
         }
 
         System.out.println("notifying listeners...");
-        eventManager.listeners.forEach(Listener::process);
+        manager.listeners.forEach(Listener::process);
 
         while (true) {
-            int size = eventManager.listeners.size();
+            int size = manager.listeners.size();
             System.out.println("listeners: " + size);
             if (size == 0) {
                 break;
@@ -45,9 +47,9 @@ public class WeakListenersExample {
             TimeUnit.MILLISECONDS.sleep(500);
             System.gc();
         }
+        System.out.println("SUCCESS: no listener remains");
 
         System.out.println("notifying listeners...");
-        eventManager.listeners.forEach(Listener::process);
+        manager.listeners.forEach(Listener::process);
     }
-
 }
