@@ -34,9 +34,9 @@ public class PhantomReferenceExample {
         System.gc();
 
         // you probably need a separate thread for real application
-        Reference aRef = que.remove(); // XXX it's blocking
+        CustomFinalizer aRef = (CustomFinalizer)que.remove(); // XXX it's blocking
         Assert.assertNull(aRef.get());
-        ((CustomFinalizer)aRef).finalizeResources();
+        aRef.finalizeResources();
         aRef.clear(); // not required since Java 9
     }
 }
