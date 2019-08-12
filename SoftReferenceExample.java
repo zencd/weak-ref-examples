@@ -17,10 +17,10 @@ public class SoftReferenceExample {
         imageCache.put("1.jpg", new SoftReference<>(image));
         image = null;
 
-        WeakReference<byte[]> weak = new WeakReference<>(new byte[WEAK_SIZE]);
+        //WeakReference<byte[]> weak = new WeakReference<>(new byte[WEAK_SIZE]);
         SoftReference<byte[]> soft = new SoftReference<>(new byte[WEAK_SIZE]);
 
-
+        System.out.println("forcing OOM... wait");
         int i = 0;
         try {
             List<byte[]> memLeak = new ArrayList<>();
