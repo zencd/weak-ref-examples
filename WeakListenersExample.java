@@ -1,26 +1,50 @@
-import java.util.Random;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class WeakListenersExample {
 
-    static class Listener {
-
+    interface Listener {
+        void process();
     }
 
-    static final WeakHashMap<Listener, Object> listeners = new WeakHashMap<>();
+    final WeakHashMap<Listener, Object> listeners = new WeakHashMap<>();
+
+    private void addEventListener(Listener listener) {
+        listeners.put(listener, "dummy");
+    }
+
+    static void client(WeakListenersExample eventManager) {
+        Listener listener = new Listener() {
+            @Override
+            public void process() {
+                System.out.println("a listener reacts on event");
+            }
+        };
+        eventManager.addEventListener(listener);
+    }
 
     public static void main(String[] args) throws InterruptedException {
+        var eventManager = new WeakListenersExample();
+
         for (int i = 0; i < 3; i++) {
+            client(eventManager);
         }
+
+        System.out.println("notifying listeners...");
+        eventManager.listeners.keySet().forEach(Listener::process);
+
         while (true) {
-            int size = listeners.size();
-            System.out.println("jobs: " + size);
+            int size = eventManager.listeners.size();
+            System.out.println("listeners: " + size);
             if (size == 0) {
                 break;
             }
-            TimeUnit.MILLISECONDS.sleep(1000);
+            TimeUnit.MILLISECONDS.sleep(500);
             System.gc();
         }
+
+        System.out.println("notifying listeners...");
+        eventManager.listeners.keySet().forEach(Listener::process);
     }
+
 }
