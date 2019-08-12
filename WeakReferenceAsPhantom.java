@@ -18,8 +18,7 @@ public class WeakReferenceAsPhantom {
         }
 
         public void finalizeResources() {
-            // finish it!
-            System.out.println("freeing resource " + externalResourceId);
+            System.out.println("PASSED: finalizeResources() invoked for " + externalResourceId);
         }
     }
 

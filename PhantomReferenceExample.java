@@ -1,3 +1,5 @@
+import org.junit.Assert;
+
 import java.lang.ref.PhantomReference;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
@@ -19,8 +21,7 @@ public class PhantomReferenceExample {
         }
 
         public void finalizeResources() {
-            // finish it!
-            System.out.println("freeing resource " + externalResourceId);
+            System.out.println("PASSED: finalizeResources() invoked for " + externalResourceId);
         }
     }
 
@@ -28,15 +29,14 @@ public class PhantomReferenceExample {
         ReferenceQueue que = new ReferenceQueue<CustomObject>();
         CustomObject referent = new CustomObject();
         CustomFinalizer phantom = new CustomFinalizer(referent, que);
-        referent = null; // making it GC-ready
-        System.out.println("phantom.get(): " + phantom.get());
+        referent = null; // GC-ready
 
         System.gc();
 
         // you probably need a separate thread for real application
         Reference aRef = que.remove(); // XXX it's blocking
-        System.out.println("got from que: " + aRef);
+        Assert.assertNull(aRef.get());
         ((CustomFinalizer)aRef).finalizeResources();
-        aRef.clear();
+        aRef.clear(); // not required since Java 9
     }
 }
