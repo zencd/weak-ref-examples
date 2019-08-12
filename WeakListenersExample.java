@@ -1,3 +1,5 @@
+import java.util.Collections;
+import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -7,15 +9,16 @@ public class WeakListenersExample {
         void process();
     }
 
-    final WeakHashMap<Listener, Object> listeners = new WeakHashMap<>();
+    // WeakHashSet не завезли, так что newSetFromMap()
+    final Set<Listener> listeners = Collections.newSetFromMap(new WeakHashMap<>());
 
     private void addEventListener(Listener listener) {
-        listeners.put(listener, "dummy");
+        listeners.add(listener);
     }
 
     static void client(WeakListenersExample eventManager) {
         Listener listener = new Listener() {
-            @Override
+            // XXX do not "optimize" it to lambda!
             public void process() {
                 System.out.println("a listener reacts on event");
             }
@@ -31,7 +34,7 @@ public class WeakListenersExample {
         }
 
         System.out.println("notifying listeners...");
-        eventManager.listeners.keySet().forEach(Listener::process);
+        eventManager.listeners.forEach(Listener::process);
 
         while (true) {
             int size = eventManager.listeners.size();
@@ -44,7 +47,7 @@ public class WeakListenersExample {
         }
 
         System.out.println("notifying listeners...");
-        eventManager.listeners.keySet().forEach(Listener::process);
+        eventManager.listeners.forEach(Listener::process);
     }
 
 }
