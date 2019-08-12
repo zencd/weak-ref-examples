@@ -36,6 +36,7 @@ public class WeakBeansExample {
         BeanManager beanManager = new BeanManager();
         new Thread(() -> beanUser(beanManager, "A", 1000)).start();
         new Thread(() -> beanUser(beanManager, "B", 2000)).start();
+        new Thread(() -> beanUser(beanManager, "B", 3000)).start();
         TimeUnit.MILLISECONDS.sleep(500);
         while (beanManager.beans.size() > 0) {
             System.out.println("beans alive: " + beanManager.beans.size());
