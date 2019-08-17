@@ -12,19 +12,22 @@ public class WeakBeansExample {
                 Bean bean;
                 WeakReference<Bean> weak = beans.get(name);
                 if (weak == null) {
-                    bean = new Bean(name);
-                    weak = new WeakReference<>(bean);
-                    beans.put(name, weak);
+                    bean = createBeanFull(name);
                 } else {
                     bean = weak.get();
                     if (bean == null) {
-                        bean = new Bean(name);
-                        weak = new WeakReference<>(bean);
-                        beans.put(name, weak);
+                        bean = createBeanFull(name);
                     }
                 }
                 return bean;
             }
+        }
+
+        private Bean createBeanFull(String name) {
+            Bean bean = new Bean(name);
+            WeakReference<Bean> weak = new WeakReference<>(bean);
+            beans.put(name, weak);
+            return bean;
         }
 
         int size() {
