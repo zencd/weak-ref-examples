@@ -1,17 +1,39 @@
+import java.lang.ref.WeakReference;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class WeakBeansExample {
     static class BeanManager {
-        final WeakValueMap<String, Bean> beans = new WeakValueMap<>();
+        private final Map<String, WeakReference<Bean>> beans = new HashMap<>();
 
         Bean getBean(String name) {
             synchronized (beans) {
-                Bean bean = beans.get(name);
-                if (bean == null) {
-                    bean = new Bean(name);
-                    beans.put(name, bean);
+                Bean bean;
+                WeakReference<Bean> weak = beans.get(name);
+                if (weak == null) {
+                    bean = createBeanFull(name);
+                } else {
+                    bean = weak.get();
+                    if (bean == null) {
+                        bean = createBeanFull(name);
+                    }
                 }
                 return bean;
+            }
+        }
+
+        private Bean createBeanFull(String name) {
+            Bean bean = new Bean(name);
+            WeakReference<Bean> weak = new WeakReference<>(bean);
+            beans.put(name, weak);
+            return bean;
+        }
+
+        int size() {
+            synchronized (beans) {
+                beans.entrySet().removeIf(it -> it.getValue().get() == null);
+                return beans.size();
             }
         }
     }
@@ -20,6 +42,7 @@ public class WeakBeansExample {
         final String name;
         Bean(String name) { this.name = name; }
         public String toString() { return "bean:" + name; }
+        protected void finalize() { System.out.println("  finalize " + this); }
     }
 
     static void beanUser(BeanManager beanManager, String beanName, long pause) {
@@ -38,10 +61,10 @@ public class WeakBeansExample {
         new Thread(() -> beanUser(beanManager, "B", 2000)).start();
         new Thread(() -> beanUser(beanManager, "B", 3000)).start();
         TimeUnit.MILLISECONDS.sleep(500);
-        while (beanManager.beans.size() > 0) {
-            System.out.println("beans alive: " + beanManager.beans.size());
+        while (beanManager.size() > 0) {
+            System.out.println("beans alive: " + beanManager.size());
             System.gc();
-            TimeUnit.MILLISECONDS.sleep(700);
+            TimeUnit.MILLISECONDS.sleep(800);
         }
         System.out.println("SUCCESS: all created beans has been auto-cleaned");
     }
