@@ -4,11 +4,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Strength {
-    private static class Data {}
+    private static class Data {
+        protected void finalize() throws InterruptedException {
+            //System.out.println("finalize 1");
+            //TimeUnit.MILLISECONDS.sleep(1000);
+            //System.out.println("finalize 2");
+        }
+    }
 
     public static void main(String[] args) throws InterruptedException {
-        System.out.println("adding weak, soft and phantom references per one object");
-        System.out.println("waiting for a reference from each queue");
+        System.out.println("adding weak, soft and phantom references per a single object");
+        System.out.println("awaiting a reference from each queue");
 
         var data = new Data();
 
@@ -31,31 +37,23 @@ public class Strength {
         Thread t3 = watchQue(phantomQue, phantomQueued);
 
         TimeUnit.MILLISECONDS.sleep(500);
-        System.out.println("forcing OOM");
-
-        try {
-            final var leaks = new ArrayList();
-            for (int i = 0;; i++) {
-                if (i % 50 == 0) {
-                    System.out.println("gc");
-                }
-                System.gc();
-                TimeUnit.MILLISECONDS.sleep(50);
-                leaks.add(new byte[20_000_000]);
-            }
-        } catch (OutOfMemoryError e) {
-            System.out.println("OOM caught");
-        }
+        forceOOM();
 
         t1.join();
         t2.join();
         t3.join();
 
-        boolean passed = weakQueued.get() && softQueued.get() && phantomQueued.get();
+        boolean weakOk = weakQueued.get();
+        boolean softOk = softQueued.get();
+        boolean phantomOk = phantomQueued.get();
+        boolean passed = weakOk && softOk && phantomOk;
+        System.out.println("weakOk: " + weakOk);
+        System.out.println("softOk: " + softOk);
+        System.out.println("phantomOk: " + phantomOk);
         System.out.println(passed ? "PASSED" : "FAIL");
     }
 
-    static Thread watchQue(ReferenceQueue<Data> que, AtomicBoolean flag) {
+    private static Thread watchQue(ReferenceQueue<Data> que, AtomicBoolean flag) {
         Thread t = new Thread(() -> {
             try {
                 Reference<? extends Data> ref = que.remove(30_000);
@@ -69,5 +67,28 @@ public class Strength {
         });
         t.start();
         return t;
+    }
+
+    private static void forceOOM() throws InterruptedException {
+        try {
+            System.out.println("forcing OOM");
+            //noinspection MismatchedQueryAndUpdateOfCollection
+            final var leaks = new ArrayList();
+            //noinspection InfiniteLoopStatement
+            for (int i = 0;; i++) {
+                if (i % 50 == 0) {
+                    System.out.println("gc");
+                }
+                System.gc();
+                TimeUnit.MILLISECONDS.sleep(50);
+                leaks.add(new byte[20_000_000]);
+            }
+        } catch (OutOfMemoryError e) {
+            System.out.println("OOM caught");
+            TimeUnit.MILLISECONDS.sleep(200);
+            System.gc();
+            TimeUnit.MILLISECONDS.sleep(200);
+            System.gc();
+        }
     }
 }
