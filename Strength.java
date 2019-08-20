@@ -1,62 +1,34 @@
 import java.lang.ref.*;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Strength {
-    static class Data {
-        protected void finalize() throws InterruptedException {
-            //System.out.println("finalize " + this);
-            //TimeUnit.MILLISECONDS.sleep(900);
-            //System.out.println("finalize completed " + this);
-        }
-    }
+    private static class Data {}
 
     public static void main(String[] args) throws InterruptedException {
-        weak_vs_phantom_on_the_same_referent();
-        weak_vs_soft_on_the_same_referent();
-    }
-
-    static void weak_vs_phantom_on_the_same_referent() throws InterruptedException {
-        System.out.println("===== weak_vs_phantom ====");
+        System.out.println("adding weak, soft and phantom references per one object");
+        System.out.println("waiting for a reference from each queue");
 
         var data = new Data();
 
         var weakQue = new ReferenceQueue<Data>();
-        var weak = new WeakReference<Data>(data, weakQue);
-
-        var phantomQue = new ReferenceQueue<Data>();
-        var phantom = new PhantomReference<Data>(data, phantomQue);
-
-        data = null;
-
-        Thread t1 = watchQue(weakQue, 10_000);
-        Thread t2 = watchQue(phantomQue, 10_000);
-
-        TimeUnit.MILLISECONDS.sleep(500);
-
-        for (int i = 0; i < 4; i++) {
-            System.out.println("gc");
-            System.gc();
-            TimeUnit.MILLISECONDS.sleep(500);
-        }
-
-    }
-
-    static void weak_vs_soft_on_the_same_referent() throws InterruptedException {
-        System.out.println("===== weak_vs_soft ====");
-
-        var data = new Data();
-
-        var weakQue = new ReferenceQueue<Data>();
+        var weakQueued = new AtomicBoolean(false);
         var weak = new WeakReference<Data>(data, weakQue);
 
         var softQue = new ReferenceQueue<Data>();
+        var softQueued = new AtomicBoolean(false);
         var soft = new SoftReference<Data>(data, softQue);
 
-        data = null;
+        var phantomQue = new ReferenceQueue<Data>();
+        var phantomQueued = new AtomicBoolean(false);
+        var phantom = new PhantomReference<Data>(data, phantomQue);
 
-        Thread t1 = watchQue(weakQue, 1000_000);
-        Thread t2 = watchQue(softQue, 1000_000);
+        data = null; // GC ready
+
+        Thread t1 = watchQue(weakQue, weakQueued);
+        Thread t2 = watchQue(softQue, softQueued);
+        Thread t3 = watchQue(phantomQue, phantomQueued);
 
         TimeUnit.MILLISECONDS.sleep(500);
         System.out.println("forcing OOM");
@@ -72,16 +44,25 @@ public class Strength {
                 leaks.add(new byte[20_000_000]);
             }
         } catch (OutOfMemoryError e) {
-            System.out.println("OOM: ok");
+            System.out.println("OOM caught");
         }
+
+        t1.join();
+        t2.join();
+        t3.join();
+
+        boolean passed = weakQueued.get() && softQueued.get() && phantomQueued.get();
+        System.out.println(passed ? "PASSED" : "FAIL");
     }
 
-    static Thread watchQue(ReferenceQueue<Data> que, long timeout) {
+    static Thread watchQue(ReferenceQueue<Data> que, AtomicBoolean flag) {
         Thread t = new Thread(() -> {
             try {
-                Reference<? extends Data> ref = null;
-                ref = que.remove(timeout);
-                System.out.println("  got reference: " + ref);
+                Reference<? extends Data> ref = que.remove(30_000);
+                if (ref != null) {
+                    flag.set(true);
+                    System.out.println("  got reference: " + ref);
+                }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
