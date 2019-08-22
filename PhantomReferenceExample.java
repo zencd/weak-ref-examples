@@ -34,16 +34,19 @@ public class PhantomReferenceExample {
         phantoms.add(phantom);
     }
 
-    private void cleanupQueuedObjects() throws InterruptedException {
-        // you probably need to do it in a separate thread
-        System.out.println("awaiting queue");
-        CustomObjectCleanup aRef = (CustomObjectCleanup)que.remove(5_000); // XXX it's blocking
-        Assert.assertNotNull("the phantom reference never queued", aRef);
-        Assert.assertNull(aRef.get());
-        aRef.cleanupResources();
-        aRef.clear(); // not required since Java 9
-        phantoms.remove(aRef);
-        Assert.assertEquals(0, phantoms.size());
+    private void cleanupQueuedObjects() {
+        try {
+            while (true) {
+                CustomObjectCleanup aRef = (CustomObjectCleanup) que.remove(); // XXX blocking
+                Assert.assertEquals(1, phantoms.size());
+                aRef.cleanupResources();
+                aRef.clear(); // not required since Java 9
+                phantoms.remove(aRef);
+                Assert.assertEquals(0, phantoms.size());
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) throws Exception {
@@ -51,8 +54,12 @@ public class PhantomReferenceExample {
         CustomObject referent = new CustomObject();
         example.markForCleanup(referent);
         referent = null; // GC ready
+
+        Thread t = new Thread(example::cleanupQueuedObjects);
+        t.setDaemon(true);
+        t.start();
+
         System.gc();
-        TimeUnit.MILLISECONDS.sleep(500);
-        example.cleanupQueuedObjects(); // use a dedicated thread
+        TimeUnit.MILLISECONDS.sleep(1_000);
     }
 }
