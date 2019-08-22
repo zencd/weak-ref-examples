@@ -34,11 +34,16 @@ public class Strength {
         var phantomQueued = new AtomicBoolean(false);
         var phantom = new PhantomReference<Data>(data, phantomQue);
 
+        var phantomQue2 = new ReferenceQueue<Data>();
+        var phantomQueued2 = new AtomicBoolean(false);
+        var phantom2 = new PhantomReference<Data>(data, phantomQue2);
+
         data = null; // GC ready
 
         Thread t1 = watchQue(weakQue, weakQueued);
         Thread t2 = watchQue(softQue, softQueued);
         Thread t3 = watchQue(phantomQue, phantomQueued);
+        Thread t4 = watchQue(phantomQue2, phantomQueued2);
 
         TimeUnit.MILLISECONDS.sleep(500);
         forceOOM();
@@ -46,14 +51,17 @@ public class Strength {
         t1.join();
         t2.join();
         t3.join();
+        t4.join();
 
         boolean weakOk = weakQueued.get();
         boolean softOk = softQueued.get();
         boolean phantomOk = phantomQueued.get();
-        boolean passed = weakOk && softOk && phantomOk;
+        boolean phantomOk2 = phantomQueued2.get();
+        boolean passed = weakOk && softOk && phantomOk && phantomOk2;
         System.out.println("weakOk: " + weakOk);
         System.out.println("softOk: " + softOk);
         System.out.println("phantomOk: " + phantomOk);
+        System.out.println("phantomOk2: " + phantomOk2);
         System.out.println(passed ? "PASSED" : "FAIL");
     }
 
